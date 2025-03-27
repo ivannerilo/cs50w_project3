@@ -25,6 +25,20 @@ function load_mailbox(mailbox) {
   document.querySelector('#emails-view').style.display = 'block';
   document.querySelector('#compose-view').style.display = 'none';
   document.querySelector('#emails-view').innerHTML = `<h3>${mailbox.charAt(0).toUpperCase() + mailbox.slice(1)}</h3>`;
+  
+  let dataArr = [];
+  fetch(`/emails/${mailbox}`)
+  .then(response => response.json())
+  .then(data => { // este fetch retorna uma lista de jsons cada um para um email.
+    console.log(data)
+    dataArr = data.map(email => {
+      return `<>${email.sender}, Subject: ${email.subject}, TimeStamp: ${email.timestamp} - `;
+    })
+    console.log(dataArr)
+  });
+
+  document.querySelector("#load-response").innerHTML = dataArr;
+
 }
 
 function handle_submit(event) {
@@ -47,7 +61,7 @@ function handle_submit(event) {
   })
   .then(response => response.json())
   .then(result => {
-      document.querySelector("#response-message").innerHTML = result? JSON.stringify(result): "Carregando...";
+      document.querySelector("#response-message").innerHTML = result? result.message: "Carregando...";
       if (result.message === "Email sent successfully.") {
         load_mailbox('inbox');
       }
@@ -57,4 +71,16 @@ function handle_submit(event) {
         formElement.body.value = '';
       }
   });
+}
+
+function emailElement(emailData) {
+  const emailContainer = Object.assign(document.createElement("div"), {
+    className: "email-container",
+  });
+  
+  const emailSender = Object.assign(document.createElement("p"), {
+    className: "email-sender",
+  });
+ 
+
 }
