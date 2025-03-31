@@ -58,7 +58,7 @@ function handle_submit(event) {
     body: JSON.stringify({
         recipients: formData.get("recipients"),
         subject: formData.get("subject"),
-        body: formData.get("body")
+        body: (() => isReply(formData.get("body"), formData.get("sender")))()  
     })
   })
   .then(response => response.json())
@@ -75,7 +75,7 @@ function handle_submit(event) {
   });
 }
 
-function open_email(event) { // criar uma função de componente para essa merda de email.
+function open_email(event, emailId) { // criar uma função de componente para essa merda de email.
   emailEl = event.currentTarget;
   emailId = emailEl.id;
   document.querySelector("#emails-view").style.display = 'none';
@@ -83,16 +83,68 @@ function open_email(event) { // criar uma função de componente para essa merda
   fetch(`/emails/${emailId}`)
   .then(response => response.json())
   .then(data => {
-    emailsInfo = `From:${data.sender}\n To:${data.recipients}\n Subject${data.subject}\n Body:${data.body}\n Timestamp${data.timestamp}`;
-    document.querySelector("#email-info").innerHTML = emailsInfo;
+    showEmailComponent(data);
+    document.querySelector("#reply-btn").addEventListener('click', () => replyEmail(data))
   });
+  
+}
+
+
+function replyEmail(data) {
+  compose_email()
+  document.querySelector('#compose-recipients').value = data.sender;
+  if (data.subject.includes("Re:")) {
+    document.querySelector('#compose-subject').value = data.subject;
+  } else {
+    document.querySelector('#compose-subject').value = `Re: ${data.subject}`;
+  }
+  if (!data.subject.includes("Re:")){
+    document.querySelector('#compose-body').value = `On ${data.timestamp} ${data.sender} wrote: ${data.body}\nReply: `;
+  } else {
+    document.querySelector('#compose-body').value = `${data.body}\nReply: `;
+  }
+
+}
+
+function isReply(body, sender){
+  if (body.includes("Reply:")){
+    console.log(`O sender é: ${sender}`)
+    const timeStamp = getTimeStamp()
+    console.log(timeStamp)
+    const bodyLog = body.split("Reply:")
+    console.log(bodyLog)
+    return `${bodyLog[0]}\nOn ${timeStamp} ${sender} wrote: ${bodyLog[1]}`;
+  }
+  return body
+}
+
+function getTimeStamp(){
+  const now = new Date()
+  return now.toLocaleString('en-US', {
+    month: 'short',
+    day: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  });
+}
+
+// Components functions
+
+function showEmailComponent(data) {
+  document.querySelector("#se-from").textContent = data.sender;
+  document.querySelector("#se-to").textContent = data.recipients;
+  document.querySelector("#se-subject").textContent = data.subject;
+  document.querySelector("#se-timestamp").textContent = data.timestamp;
+  document.querySelector("#se-body").textContent = data.body;
 }
 
 function emailElement(emailData) {
   const emailContainer = Object.assign(document.createElement("div"), {
     className: "email-container",
     id: emailData.id,
-    onclick: ((event) => open_email(emailData, event))
+    onclick: ((event) => open_email(event))
   });
   const emailSender = Object.assign(document.createElement("span"), {
     className: "email-sender"
