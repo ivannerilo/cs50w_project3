@@ -32,23 +32,16 @@ function load_mailbox(mailbox) {
   fetch(`/emails/${mailbox}`)
   .then(response => response.json())
   .then(data => { // este fetch retorna uma lista de jsons cada um para um email.
-    console.log(data)
     data.forEach(email => {
       document.querySelector("#emails-view").appendChild(emailElement(email));
     })
-    console.log(dataArr)
   });
-
-  
-
 }
 
 function handle_submit(event) {
   event.preventDefault();
   const formElement = event.currentTarget;
   const formData = new FormData(formElement);
-
-  console.log(formData);
 
   fetch('/emails', {
     method: 'POST',
@@ -63,7 +56,7 @@ function handle_submit(event) {
   })
   .then(response => response.json())
   .then(result => {
-      document.querySelector("#response-message").innerHTML = result? result.message: "Carregando...";
+      document.querySelector("#response-message").innerHTML = result? result.message : "Carregando...";
       if (result.message === "Email sent successfully.") {
         load_mailbox('inbox');
       }
@@ -75,7 +68,7 @@ function handle_submit(event) {
   });
 }
 
-function open_email(event, emailId) { // criar uma função de componente para essa merda de email.
+function open_email(event, emailId) {
   emailEl = event.currentTarget;
   emailId = emailEl.id;
   document.querySelector("#emails-view").style.display = 'none';
@@ -84,11 +77,21 @@ function open_email(event, emailId) { // criar uma função de componente para e
   .then(response => response.json())
   .then(data => {
     showEmailComponent(data);
-    document.querySelector("#reply-btn").addEventListener('click', () => replyEmail(data))
+    document.querySelector("#reply-btn").addEventListener('click', () => replyEmail(data));
+    if (!data.read) {
+      readEmail(emailId);
+    }
+    const archiveBtn = document.querySelector("#archive-btn");
+    if (data.archived) {
+      archiveBtn.innerHTML = "Unarchive";
+      console.log("Desarquivar")
+    } else {
+      archiveBtn.innerHTML = "Archive";
+      console.log("Arquivar")
+    }
+    archiveBtn.addEventListener('click', () => handleArchive(data));
   });
-  
 }
-
 
 function replyEmail(data) {
   compose_email()
@@ -108,11 +111,8 @@ function replyEmail(data) {
 
 function isReply(body, sender){
   if (body.includes("Reply:")){
-    console.log(`O sender é: ${sender}`)
     const timeStamp = getTimeStamp()
-    console.log(timeStamp)
     const bodyLog = body.split("Reply:")
-    console.log(bodyLog)
     return `${bodyLog[0]}\nOn ${timeStamp} ${sender} wrote: ${bodyLog[1]}`;
   }
   return body
@@ -128,6 +128,27 @@ function getTimeStamp(){
     minute: '2-digit',
     hour12: true
   });
+}
+
+function handleArchive(data){
+  fetch(`/emails/${data.id}`, {
+    method: "PUT",
+    body: JSON.stringify({
+      archived: data.archived ? false : true
+    })
+  })
+  .then(response => load_mailbox('inbox'))
+  .catch(err =>  document.querySelector("#message").textContent = err);
+}
+
+function readEmail(emailId){
+  fetch(`/emails/${emailId}`, {
+    method: "PUT",
+    body: JSON.stringify({
+      read: true
+    })
+  })
+  .catch(err =>  document.querySelector("#message").textContent = err);
 }
 
 // Components functions
@@ -146,6 +167,9 @@ function emailElement(emailData) {
     id: emailData.id,
     onclick: ((event) => open_email(event))
   });
+  if (!emailData.read) {
+    emailContainer.style.backgroundColor = "#e9ecef";
+  }
   const emailSender = Object.assign(document.createElement("span"), {
     className: "email-sender"
   });
